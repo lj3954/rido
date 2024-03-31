@@ -10,18 +10,28 @@ nonfree software or any software licensed under incompatible licenses
 which enable the production of nonfree software, such as the MIT license.
 
 ## Usage
-(TBD)
 Rido can be added to your project using 
-`cargo add rido --features consumer`.
+`cargo add rido`
 
-A Consumer release can be fetched using the `new` method, which may return an error that must be handled.
+Optionally, you can enable enterprise windows releases with the `enterprise` feature.
+
+A release can be fetched using the `new` method, which may return an error that must be handled.
 For example:
 
 ```rust
-use rido::ConsumerRelease;
-let release = ConsumerRelease::new("10", "English (United States)")?;
+use rido::WindowsRelease;
+let release = WindowsRelease::new("10", "English (United States)")?;
 ```
 
 The ConsumerRelease struct contains URL and Hash instance fields, which 
 are populated by the `new` method.
 
+## Available Releases and Languages
+
+Windows 10 and 11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
+
+Windows 8: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
+
+Enterprise: 
+
+Windows 10-ltsc, 10-enterprise, 11-enterprise: Various languages (to be added to documentation later).

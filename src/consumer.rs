@@ -3,28 +3,16 @@ use reqwest::header::{ACCEPT, USER_AGENT, REFERER};
 use std::time::SystemTime;
 use std::error::Error;
 
-pub struct ConsumerRelease {
-    pub url: String,
-    pub hash: String,
-}
-
-impl ConsumerRelease {
-    pub fn new(release: &str, lang: &str) -> Result<Self, Box<dyn Error>> {
-        let (url, hash) = get_consumer_info(release, lang)?;
-        Ok(Self {
-            url,
-            hash,
-        })
-    }
-}
-
-pub fn get_consumer_info(release: &str, language: &str) -> Result<(String, String), Box<dyn Error>> {
+pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(String, String), Box<dyn Error>> {
     let url = match release {
         "8" => "https://microsoft.com/en-us/software-download/windows8ISO",
         "10" => "https://microsoft.com/en-us/software-download/windows10ISO",
         "11" => "https://microsoft.com/en-us/software-download/windows11",
         _ => return Err("Unsupported release".into()),
     };
+    if arch == "i686" && release == "11" {
+        return Err("Windows 11 does not offer a 32-bit edition.".into());
+    }
 
     // Choose latest firefox release based on Firefox's 4 week release schedule
     let firefox_release = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
@@ -82,7 +70,13 @@ pub fn get_consumer_info(release: &str, language: &str) -> Result<(String, Strin
         return Err("Microsoft blocked the automated download request based on your IP address.".into());
     }
 
-    let ending = download_link_html.find("IsoX64").ok_or("Unable to parse download link.")?;
+    let isotype = match arch {
+        "x86_64" => "IsoX64",
+        "i686" => "IsoX86",
+        _ => return Err("Unsupported architecture.".into()),
+    };
+
+    let ending = download_link_html.find(isotype).ok_or("Unable to parse download link.")?;
     let Some(starting) = download_link_html[..ending].rfind("https://software.download.prss.microsoft.com")
         else {
             return Err("Unable to parse download link from HTML.".into());

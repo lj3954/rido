@@ -1,6 +1,6 @@
 [package]
 name = "rido"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Fetch valid URLs of Microsoft Operating Systems."
 license = "GPL-3.0"
@@ -13,6 +13,11 @@ reqwest = { version = "0.12.2", features = ["blocking"] }
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [features]
+default = [
+    "consumer"
+]
+
 consumer = []
+enterprise = []
 
 
