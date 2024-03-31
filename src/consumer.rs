@@ -32,7 +32,6 @@ pub fn get_consumer_info(release: &str, language: &str) -> Result<(String, Strin
         Ok(time) => 124 + (time.as_secs() - 1710806400) / 2419200,
         Err(_) => return Err("Invalid system time.".into()),
     };
-    println!("Using firefox release: {}", firefox_release);
     let useragent = format!("Mozilla 5.0 (X11, Linux x86_64; rv:{}.0) Gecko/20100101 Firefox/{}.0", firefox_release, firefox_release);
     let uuid = Uuid::new_v4();
 
@@ -83,16 +82,16 @@ pub fn get_consumer_info(release: &str, language: &str) -> Result<(String, Strin
         return Err("Microsoft blocked the automated download request based on your IP address.".into());
     }
 
-    let ending = download_link_html.find(r#""><span class="product-download-type">IsoX64</span:"#).unwrap_or(download_link_html.len());
+    let ending = download_link_html.find("IsoX64").ok_or("Unable to parse download link.")?;
     let Some(starting) = download_link_html[..ending].rfind("https://software.download.prss.microsoft.com")
         else {
             return Err("Unable to parse download link from HTML.".into());
         };
 
-    let link = &download_link_html[starting..ending];
-    // Correct possible invalid URLs with certain releases or languages.
-    let link = &link[0..link.find(r#""><span"#).unwrap_or(link.len())];
-    let link = &link[0..link.find("&quot").unwrap_or(link.len())];
+    let link = download_link_html[starting..ending].chars()
+        .filter(|c| c.is_alphanumeric() || c.is_ascii_punctuation())
+        .collect::<String>()
+        .replace("&amp;", "&");
 
     let hash = match release {
         "11" => download_link_html.split("<tr><td>").find(|line| {
@@ -101,7 +100,7 @@ pub fn get_consumer_info(release: &str, language: &str) -> Result<(String, Strin
         _ => "",
     };
 
-    Ok((link.to_string(), hash.to_string()))
+    Ok((link, hash.to_string()))
 }
 
 
