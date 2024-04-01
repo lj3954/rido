@@ -1,6 +1,6 @@
 use std::error::Error;
 
-pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(String, String), Box<dyn Error>> {
+pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(String, Option<String>), Box<dyn Error>> {
     let valid_release = match release {
         "10-ltsc" => "windows-10-enterprise".into(),
         _ => "windows-".to_owned() + release,
@@ -46,5 +46,5 @@ pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(Stri
         (_, _) => return Err("Invalid architecture for provided release".into()),
     }.unwrap_or(iso_download_links.get(0).ok_or("Could not find download link")?);
 
-    Ok((link.to_string(), "".to_string()))
+    Ok((link.to_string(), None))
 }

@@ -5,17 +5,18 @@ mod consumer;
 #[cfg(feature = "enterprise")]
 mod enterprise;
 
+#[derive(Debug, Clone)]
 pub struct WindowsRelease {
     pub release: String,
     pub architecture: String,
     pub lang: String,
     pub url: String,
-    pub hash: String,
+    pub hash: Option<String>,
 }
 
 impl WindowsRelease {
     pub fn new(release: &str, lang: &str, arch: &str) -> Result<Self, Box<dyn Error>> {
-        let data: (String, String) = match release {
+        let data: (String, Option<String>) = match release {
             #[cfg(feature = "consumer")]
             "8" | "10" | "11" => {
                 consumer::get_consumer_info(release, lang, arch)?

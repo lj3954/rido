@@ -23,12 +23,12 @@ use rido::WindowsRelease;
 let release = WindowsRelease::new("10", "English (United States)")?;
 ```
 
-The ConsumerRelease struct contains URL and Hash instance fields, which 
+The ConsumerRelease struct contains URL (String) and Hash (Option<String>) instance fields, which 
 are populated by the `new` method.
 
 ## Available Releases and Languages
 
-Windows 10 and 11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
+Windows 10 and 11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, French Canadian, German, Greek, Hebrew, Hungarian, Italian, Japanese, Korean, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Spanish (Mexico), Swedish, Thai, Turkish, Ukrainian
 
 Windows 8: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
 

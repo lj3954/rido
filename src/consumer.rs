@@ -3,16 +3,29 @@ use reqwest::header::{ACCEPT, USER_AGENT, REFERER};
 use std::time::SystemTime;
 use std::error::Error;
 
-pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(String, String), Box<dyn Error>> {
+pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(String, Option<String>), Box<dyn Error>> {
+    if arch == "i686" && release == "11" {
+        return Err("Windows 11 does not offer a 32-bit edition.".into());
+    }
     let url = match release {
         "8" => "https://microsoft.com/en-us/software-download/windows8ISO",
         "10" => "https://microsoft.com/en-us/software-download/windows10ISO",
         "11" => "https://microsoft.com/en-us/software-download/windows11",
         _ => return Err("Unsupported release".into()),
     };
-    if arch == "i686" && release == "11" {
-        return Err("Windows 11 does not offer a 32-bit edition.".into());
-    }
+    let (isotype, bits) = match arch {
+        // 'English (United States)' checksums appear as 'English' on the download page.
+        "x86_64" => ("IsoX64", "64-bit"),
+        "i686" => ("IsoX86", "32-bit"),
+        _ => return Err("Unsupported architecture.".into()),
+    };
+
+    let hash_lang = match language {
+        "English (United States)" => "English",
+        "Chinese (Simplified)" => "Chinese Simplified",
+        "Chinese (Traditional)" => "Chinese Traditional",
+        _ => language,
+    };
 
     // Choose latest firefox release based on Firefox's 4 week release schedule
     let firefox_release = match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
@@ -55,13 +68,36 @@ pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(S
         .ok_or("Could not find skuid.")?
         .split("&quot;").nth(3).unwrap();
 
-    let download_link_html = client.post(format!("https://www.microsoft.com/en-US/api/controls/contentinclude/html?pageId=6e2a1789-ef16-4f27-a296-74ef7ef5d96b&host=www.microsoft.com&segments=software-download,{}&query=&action=GetProductDownloadLinksBySku&sessionId={}&skuId={}&language=English&sdVersion=2", url_segment, uuid, skuid))
+    let download_page_url = match release {
+        "8" => format!("https://www.microsoft.com/en-us/api/controls/contentinclude/html?pageId=cfa9e580-a81e-4a4b-a846-7b21bf4e2e5b&host=www.microsoft.com&segments=software-download%2cwindows8ISO&query=&action=GetProductDownloadLinksBySku&sessionId={}&skuId={}&language=English&sdVersion=2", uuid, skuid),
+        "10" => format!("https://www.microsoft.com/en-us/api/controls/contentinclude/html?pageId=a224afab-2097-4dfa-a2ba-463eb191a285&host=www.microsoft.com&segments=software-download,windows10ISO&query=&action=GetProductDownloadLinksBySku&sessionId={}&skuId={}&language=English&sdVersion=2", uuid, skuid),
+        "11" => format!("https://www.microsoft.com/en-US/api/controls/contentinclude/html?pageId=6e2a1789-ef16-4f27-a296-74ef7ef5d96b&host=www.microsoft.com&segments=software-download,windows11&query=&action=GetProductDownloadLinksBySku&sessionId={}&skuId={}&language=English&sdVersion=2", uuid, skuid),
+        _ => return Err("Unsupported release".into()),
+    };
+
+    let download_link_html = client.post(download_page_url)
         .header(USER_AGENT, &useragent)
         .header(ACCEPT, "")
         .header(REFERER, url)
         .body("")
         .send().map_err(|e| format!("{} while trying to find the download link.", e))?
         .text()?;
+
+    let hash = download_link_html.split("<tr><td>").find_map(|line| {
+        println!("{}", line);
+        if line.contains(&hash_lang) && line.contains(bits) {
+            match release {
+                "11" => Some(line.split(r#""word-wrap: break-word">"#).nth(1).unwrap()
+                    .split("</td>").next().unwrap().to_string()),
+                "10" => Some(line.split("</td><td>").nth(1).unwrap()
+                    .split("</td></tr>").next().unwrap().to_string()),
+                _ => None,
+            }
+        } else {
+            None
+        }
+    });
+
     let download_link_html = &download_link_html[..std::cmp::min(download_link_html.len(), 4096)];
 
     if download_link_html.is_empty() {
@@ -70,31 +106,14 @@ pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(S
         return Err("Microsoft blocked the automated download request based on your IP address.".into());
     }
 
-    let isotype = match arch {
-        "x86_64" => "IsoX64",
-        "i686" => "IsoX86",
-        _ => return Err("Unsupported architecture.".into()),
-    };
-
     let ending = download_link_html.find(isotype).ok_or("Unable to parse download link.")?;
-    let Some(starting) = download_link_html[..ending].rfind("https://software.download.prss.microsoft.com")
-        else {
-            return Err("Unable to parse download link from HTML.".into());
-        };
+    let starting = download_link_html[..ending].rfind("https://software.download.prss.microsoft.com").ok_or("Unable to parse download link.")?;
 
-    let link = download_link_html[starting..ending].chars()
+    let mut link = download_link_html[starting..ending].chars()
         .filter(|c| c.is_alphanumeric() || c.is_ascii_punctuation())
         .collect::<String>()
         .replace("&amp;", "&");
+    link.truncate(512);
 
-    let hash = match release {
-        "11" => download_link_html.split("<tr><td>").find(|line| {
-            line.contains(&(language.to_owned() + "  64-bit"))
-        }).unwrap_or(""),
-        _ => "",
-    };
-
-    Ok((link, hash.to_string()))
+    Ok((link, hash))
 }
-
-
