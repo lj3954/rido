@@ -20,18 +20,22 @@ For example:
 
 ```rust
 use rido::WindowsRelease;
-let release = WindowsRelease::new("10", "English (United States)")?;
+let release = WindowsRelease::new("10", "English (United States)", "x86_64")?;
 ```
 
-The ConsumerRelease struct contains URL (String) and Hash (Option<String>) instance fields, which 
+The WindowsRelease struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
 are populated by the `new` method.
+
+Rido also supports downloading both 32-bit and 64-bit images for operating systems that support them. Windows 8, 10, and enterprise Windows 10 releases offer 32-bit images. Use the "i686" architecture to specify a 32-bit image, and "x86_64" for a 64-bit image.
 
 ## Available Releases and Languages
 
-Windows 10 and 11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, French Canadian, German, Greek, Hebrew, Hungarian, Italian, Japanese, Korean, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Spanish (Mexico), Swedish, Thai, Turkish, Ukrainian
+10/11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, French Canadian, German, Greek, Hebrew, Hungarian, Italian, Japanese, Korean, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Spanish (Mexico), Swedish, Thai, Turkish, Ukrainian
 
-Windows 8: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
+8: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
 
 Enterprise: 
 
-Windows 10-ltsc, 10-enterprise, 11-enterprise: Various languages (to be added to documentation later).
+10-ltsc/10-enterprise/11-enterprise: English (United States), English (Great Britain), Chinese (Simplified), Chinese (Traditional), French, German, Italian, Japanese, Korean, Portuguese (Brazil), Spanish
+
+server-2012-r2/server-2016/server-2019/server-2022: English (United States), Chinese (Simplified), French, German, Italian, Japanese, Russian, Spanish
