@@ -15,25 +15,24 @@ pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(Stri
         return Err("Windows enterprise evaluation download page gave us an empty response".into());
     }
 
-    let enterprise_lang = match lang {
-        "English (Great Britain)" => "&culture=en-gb&country=GB",
-        "Chinese (Simplified)" => "&culture=zh-cn&country=CN",
-        "Chinese (Traditional)" => "&culture=zh-tw&country=TW",
-        "French" => "&culture=fr-fr&country=FR",
-        "German" => "&culture=de-de&country=DE",
-        "Italian" => "&culture=it-it&country=IT",
-        "Japanese" => "&culture=ja-jp&country=JP",
-        "Korean" => "&culture=ko-kr&country=KR",
-        "Portuguese (Brazil)" => "&culture=pt-br&country=BR",
-        "Spanish" => "&culture=es-es&country=ES",
-        "Russian" => "&culture=ru-ru&country=RU",
-        _ => "&culture=en-us&country=US",
+    let (culture, country) = match lang {
+        "English (Great Britain)" => ("en-gb", "GB"),
+        "Chinese (Simplified)" => ("zh-cn", "CN"),
+        "Chinese (Traditional)" => ("zh-tw", "TW"),
+        "French" => ("fr-fr", "FR"),
+        "German" => ("de-de", "DE"),
+        "Italian" => ("it-it", "IT"),
+        "Japanese" => ("ja-jp", "JP"),
+        "Korean" => ("ko-kr", "KR"),
+        "Portuguese (Brazil)" => ("pt-br", "BR"),
+        "Spanish" => ("es-es", "ES"),
+        "Russian" => ("ru-ru", "RU"),
+        _ => ("en-us", "US"),
     };
 
-    let download_page_html = download_page_html.replace("&amp;", "&");
-    let iso_download_links = download_page_html.split("https://go.microsoft.com/").filter_map(|line| {
-        if line.contains(enterprise_lang) {
-            Some(line.split_inclusive(enterprise_lang).next().unwrap())
+    let iso_download_links = download_page_html.split("class=\"cta font-weight-semibold \" data-target=\"").filter_map(|line| {
+        if line.contains(&format!("&culture={}&country={}", culture, country)) {
+            Some(line.split(country).next().unwrap())
         } else {
             None
         }
@@ -47,5 +46,5 @@ pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(Stri
         (_, _) => return Err("Invalid architecture for provided release".into()),
     }.unwrap_or(iso_download_links.get(0).ok_or("Could not find download link")?);
 
-    Ok(("https://go.microsoft.com".to_owned() + link, None))
+    Ok((link.to_string(), None))
 }
