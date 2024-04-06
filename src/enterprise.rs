@@ -32,7 +32,7 @@ pub fn get_enterprise_info(release: &str, lang: &str, arch: &str)-> Result<(Stri
 
     let iso_download_links = download_page_html.split("class=\"cta font-weight-semibold \" data-target=\"").filter_map(|line| {
         if line.contains(&format!("&culture={}&country={}", culture, country)) {
-            Some(line.split(country).next().unwrap())
+            Some(line.split_inclusive(country).next().unwrap())
         } else {
             None
         }
