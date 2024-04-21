@@ -20,6 +20,7 @@ the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with this program.  If 
 not, see <https://www.gnu.org/licenses/>.
 
+The source code for this program can be found at 'https://github.com/lj3954/rido'.
 For more information, run {} --license\n", args[0]);
             eprintln!("Usage: {} [language] [arch]", args[0]);
             std::process::exit(1);
