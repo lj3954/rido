@@ -4,8 +4,10 @@ valid URLs and Checksums for various releases of Microsoft Windows.
 It is inspired by the [Mido](https://github.com/ElliotKillick/Mido) bash script and
 [Fido](https://github.com/pbatard/Fido) PowerShell script. 
 
+Rido also provides a CLI, directly allowing users or applications to request URLs and checksums for various windows releases. This can be installed using `cargo install rido`. This CLI takes in a release, and optionally a language and architecture, and prints a URL and optionally a checksum to stdout, separated by spaces.
+
 ## License
-Rido is licensed under the [GNU General Public License Version 3](https://www.gnu.org/licenses/gpl-3.0). This license prohibits the use of this library within 
+Rido is licensed under the [GNU General Public License Version 3](https://www.gnu.org/licenses/gpl-3.0). This license prohibits the use of this crate as a library within 
 nonfree software or any software licensed under incompatible licenses
 which enable the production of nonfree software, such as the MIT license.
 
