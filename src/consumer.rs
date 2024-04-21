@@ -84,7 +84,7 @@ pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(S
         .text()?;
 
     let hash = download_link_html.split("<tr><td>").find_map(|line| {
-        println!("{}", line);
+        //println!("{}", line);
         if line.contains(&hash_lang) && line.contains(bits) {
             match release {
                 "11" => Some(line.split(r#""word-wrap: break-word">"#).nth(1).unwrap()
@@ -108,12 +108,12 @@ pub fn get_consumer_info(release: &str, language: &str, arch: &str) -> Result<(S
 
     let ending = download_link_html.find(isotype).ok_or("Unable to parse download link.")?;
     let starting = download_link_html[..ending].rfind("https://software.download.prss.microsoft.com").ok_or("Unable to parse download link.")?;
+    let ending = download_link_html[starting..].find("\"").ok_or("Unable to parse download link.")? + starting;
 
-    let mut link = download_link_html[starting..ending].chars()
+    let link = download_link_html[starting..ending].chars()
         .filter(|c| c.is_alphanumeric() || c.is_ascii_punctuation())
         .collect::<String>()
         .replace("&amp;", "&");
-    link.truncate(512);
 
     Ok((link, hash))
 }
