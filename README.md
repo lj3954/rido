@@ -19,16 +19,18 @@ A release can be fetched using the `new` method, which may return an error that 
 For example:
 
 ```rust
-use rido::WindowsEntry;
-let release = WindowsEntry::new("10", "English (United States)", "x86_64")?;
+use rido::WindowsData;
+let release = WindowsData::new("10", "English (United States)", "x86_64")?;
 ```
 
-The WindowsEntry struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
+The WindowsData struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
 are populated by the `new` method.
 
 Rido also supports downloading both 32-bit and 64-bit images for operating systems that support them. Windows 10 (including enterprise) releases offer 32-bit images. Use the i686 architecture to specify a 32-bit image, and x86_64 for a 64-bit image.
 
-Rido includes an Architecture enum and release/language enums for each of consumer & enterprise. Alternatively, as in the example above, you may use &strs, since ```TryInto<&str>``` is implemented for each and the new function will take in any type implementing TryInto;
+Rido includes an Architecture enum and release/language enums for each of consumer & enterprise. Alternatively, as in the example above, you may use ```&str```s, since ```TryInto<&str>``` is implemented for each and the new function will take in any type implementing TryInto;
+
+You can also build a WindowsEntry with release, language, and architecture fields, or gather a vector of all available entries with the "list_all" method. WindowsData implements ```TryFrom<WindowsEntry>```
 
 ## Available Releases and Languages
 

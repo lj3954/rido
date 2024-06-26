@@ -1,6 +1,6 @@
 [package]
 name = "rido"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 description = "Fetch valid URLs and checksums of Microsoft Operating Systems."
 license = "GPL-3.0"
