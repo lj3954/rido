@@ -1,6 +1,6 @@
 [package]
 name = "rido"
-version = "0.4.3"
+version = "0.5.0"
 edition = "2021"
 description = "Fetch valid URLs and checksums of Microsoft Operating Systems."
 license = "GPL-3.0"
@@ -9,15 +9,15 @@ repository = "https://github.com/lj3954/rido"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+regex = "1.10.5"
 reqwest = { version = "0.12.2", features = ["blocking"] }
+strum = "0.26.3"
+strum_macros = "0.26.4"
+thiserror = "1.0.61"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [features]
-default = [
-    "consumer"
-]
+default = ["consumer", "enterprise"]
 
 consumer = []
 enterprise = []
-
-

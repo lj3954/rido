@@ -4,8 +4,6 @@ valid URLs and Checksums for various releases of Microsoft Windows.
 It is inspired by the [Mido](https://github.com/ElliotKillick/Mido) bash script and
 [Fido](https://github.com/pbatard/Fido) PowerShell script. 
 
-Rido also provides a CLI, directly allowing users or applications to request URLs and checksums for various windows releases. This can be installed using `cargo install rido`. This CLI takes in a release, and optionally a language and architecture, and prints a URL and optionally a checksum to stdout, separated by spaces.
-
 ## License
 Rido is licensed under the [GNU General Public License Version 3](https://www.gnu.org/licenses/gpl-3.0). This license prohibits the use of this crate as a library within 
 nonfree software or any software licensed under incompatible licenses
@@ -21,20 +19,20 @@ A release can be fetched using the `new` method, which may return an error that 
 For example:
 
 ```rust
-use rido::WindowsRelease;
-let release = WindowsRelease::new("10", "English (United States)", "x86_64")?;
+use rido::WindowsEntry;
+let release = WindowsEntry::new("10", "English (United States)", "x86_64")?;
 ```
 
-The WindowsRelease struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
+The WindowsEntry struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
 are populated by the `new` method.
 
-Rido also supports downloading both 32-bit and 64-bit images for operating systems that support them. Windows 8, 10, and enterprise Windows 10 releases offer 32-bit images. Use the "i686" architecture to specify a 32-bit image, and "x86_64" for a 64-bit image.
+Rido also supports downloading both 32-bit and 64-bit images for operating systems that support them. Windows 10 (including enterprise) releases offer 32-bit images. Use the i686 architecture to specify a 32-bit image, and x86_64 for a 64-bit image.
+
+Rido includes an Architecture enum and release/language enums for each of consumer & enterprise. Alternatively, as in the example above, you may use &strs, since ```TryInto<&str>``` is implemented for each and the new function will take in any type implementing TryInto;
 
 ## Available Releases and Languages
 
 10/11: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, French Canadian, German, Greek, Hebrew, Hungarian, Italian, Japanese, Korean, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Spanish (Mexico), Swedish, Thai, Turkish, Ukrainian
-
-8: Arabic, Brazilian Portuguese, Bulgarian, Chinese (Simplified), Chinese (Traditional), Chinese (Traditional Hong Kong), Croatian, Czech, Danish, Dutch, English (United States), English International, Estonian, Finnish, French, German, Greek, Hebrew, Hungarian, Italian, Japanese, Latvian, Lithuanian, Norwegian, Polish, Portuguese, Romanian, Russian, Serbian Latin, Slovak, Slovenian, Spanish, Swedish, Thai, Turkish, Ukrainian
 
 Enterprise: 
 
