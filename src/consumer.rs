@@ -21,11 +21,12 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         WindowsArchitecture::i686 => ("x32", "32"),
     };
 
+    let lang_binding = lang.to_string();
     let hash_lang = match lang {
         ConsumerLanguage::EnglishUS => "English",
         ConsumerLanguage::SimplifiedChinese => "Chinese Simplified",
         ConsumerLanguage::TraditionalChinese => "Chinese Traditional",
-        _ => &lang.to_string(),
+        _ => &lang_binding,
     };
 
     let user_agent = {
