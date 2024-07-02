@@ -134,8 +134,8 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
 
 #[derive(EnumIter, Debug, Copy, Clone, PartialEq)]
 pub enum ConsumerRelease {
-    Ten,
     Eleven,
+    Ten,
 }
 
 impl From<ConsumerRelease> for WindowsRelease {

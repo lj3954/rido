@@ -65,13 +65,13 @@ pub fn get_enterprise_info(release: EnterpriseRelease, lang: EnterpriseLanguage,
 
 #[derive(PartialEq, EnumIter, Debug, Copy, Clone)]
 pub enum EnterpriseRelease {
+    ElevenEnterprise,
     TenEnterprise,
     TenLtsc,
-    ElevenEnterprise,
-    Server2012R2,
-    Server2016,
-    Server2019,
     Server2022,
+    Server2019,
+    Server2016,
+    Server2012R2,
 }
 
 impl From<EnterpriseRelease> for WindowsRelease {
