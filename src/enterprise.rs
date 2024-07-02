@@ -63,7 +63,7 @@ pub fn get_enterprise_info(release: EnterpriseRelease, lang: EnterpriseLanguage,
     Ok((url, None))
 }
 
-#[derive(EnumIter, Debug, Copy, Clone)]
+#[derive(PartialEq, EnumIter, Debug, Copy, Clone)]
 pub enum EnterpriseRelease {
     TenEnterprise,
     TenLtsc,
@@ -111,7 +111,7 @@ impl TryFrom<&str> for EnterpriseRelease {
     }
 }
 
-#[derive(EnumIter, Debug, Copy, Clone)]
+#[derive(PartialEq, EnumIter, Debug, Copy, Clone)]
 pub enum EnterpriseLanguage {
     BrazilianPortuguese,
     EnglishUS,

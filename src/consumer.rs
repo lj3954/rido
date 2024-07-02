@@ -165,7 +165,7 @@ impl TryFrom<&str> for ConsumerRelease {
     }
 }
 
-#[derive(EnumIter, Debug, Copy, Clone)]
+#[derive(PartialEq, EnumIter, Debug, Copy, Clone)]
 pub enum ConsumerLanguage {
     Arabic,
     BrazilianPortuguese,

@@ -34,7 +34,7 @@ impl WindowsData {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct WindowsEntry {
     pub release: WindowsRelease,
     pub arch: WindowsArchitecture,
@@ -90,7 +90,7 @@ impl TryFrom<WindowsEntry> for WindowsData {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WindowsRelease {
     #[cfg(feature = "consumer")]
     Consumer(ConsumerRelease),
@@ -122,7 +122,7 @@ impl TryFrom<&str> for WindowsRelease {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 pub enum WindowsLanguage {
     #[cfg(feature = "consumer")]
     Consumer(ConsumerLanguage),
