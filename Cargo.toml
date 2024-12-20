@@ -11,6 +11,8 @@ repository = "https://github.com/lj3954/rido"
 [dependencies]
 regex = "1.10.5"
 reqwest = { version = "0.12.2", features = ["blocking"] }
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = "1.0.133"
 strum = "0.26.3"
 strum_macros = "0.26.4"
 thiserror = "1.0.61"

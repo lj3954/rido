@@ -1,7 +1,7 @@
 use crate::{RidoError, ValidateLanguage, ValidateWithArch, WindowsArchitecture, WindowsLanguage, WindowsRelease};
-use regex::Regex;
 use reqwest::header::{ACCEPT, REFERER, USER_AGENT};
-use std::{cmp::min, fmt, time::SystemTime};
+use serde::Deserialize;
+use std::{fmt, time::SystemTime};
 use strum_macros::EnumIter;
 use uuid::Uuid;
 
@@ -16,17 +16,9 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         ConsumerRelease::Ten => "https://microsoft.com/en-us/software-download/windows10ISO",
         ConsumerRelease::Eleven => "https://microsoft.com/en-us/software-download/windows11",
     };
-    let (isotype, bits) = match arch {
-        WindowsArchitecture::x86_64 => ("x64", "64"),
-        WindowsArchitecture::i686 => ("x32", "32"),
-    };
-
-    let lang_binding = lang.to_string();
-    let hash_lang = match lang {
-        ConsumerLanguage::EnglishUS => "English",
-        ConsumerLanguage::SimplifiedChinese => "Chinese Simplified",
-        ConsumerLanguage::TraditionalChinese => "Chinese Traditional",
-        _ => &lang_binding,
+    let isotype = match arch {
+        WindowsArchitecture::x86_64 => "x64",
+        WindowsArchitecture::i686 => "x32",
     };
 
     let user_agent = {
@@ -38,7 +30,7 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         format!("Mozilla 5.0 (X11, Linux x86_64; rv:{firefox_release}.0) Gecko/20100101 Firefox/{firefox_release}.0")
     };
 
-    let uuid = Uuid::new_v4();
+    let uuid = Uuid::new_v4().to_string();
 
     let client = reqwest::blocking::Client::new();
 
@@ -64,72 +56,60 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         .header(USER_AGENT, &user_agent)
         .send()?;
 
-    let url_segment = &url.split('/').last().unwrap();
-    let skuid_table = client.post(format!("https://www.microsoft.com/en-US/api/controls/contentinclude/html?pageId=a8f8f489-4c7f-463a-9ca6-5cff94d8d041&host=www.microsoft.com&segments=software-download,{}&query=&action=getskuinformationbyproductedition&sessionId={}&productEditionId={}&sdVersion=2", url_segment, uuid, product_id))
-        .header(USER_AGENT, &user_agent)
-        .header(ACCEPT, "")
-        .header(REFERER, url)
-        .body("")
-        .send()?
-        .text()?;
+    let skuid_table = get_skus(&client, product_id, &uuid)?;
+    let sku = skuid_table
+        .into_iter()
+        .find(|s| s.localized_language == lang.to_string())
+        .ok_or(RidoError::SKUID)?;
+    let skuid = sku.id;
 
-    let skuid = skuid_table[..std::cmp::min(skuid_table.len(), 10240)]
-        .lines()
-        .find(|line| line.contains(&lang.to_string()))
-        .ok_or(RidoError::SKUID)?
-        .split("&quot;")
-        .nth(3)
-        .unwrap();
+    let urls = get_urls(&client, &skuid, &uuid, url)?;
+    let url = urls
+        .into_iter()
+        .map(|u| u.uri)
+        .find(|u| u.contains(isotype))
+        .ok_or(RidoError::URL)?;
+    Ok((url, None))
+}
 
-    let download_page_url = match release {
-        ConsumerRelease::Ten => format!("https://www.microsoft.com/en-us/api/controls/contentinclude/html?pageId=a224afab-2097-4dfa-a2ba-463eb191a285&host=www.microsoft.com&segments=software-download,windows10ISO&query=&action=GetProductDownloadLinksBySku&sessionId={uuid}&skuId={skuid}&language=English&sdVersion=2"),
-        ConsumerRelease::Eleven => format!("https://www.microsoft.com/en-US/api/controls/contentinclude/html?pageId=6e2a1789-ef16-4f27-a296-74ef7ef5d96b&host=www.microsoft.com&segments=software-download,windows11&query=&action=GetProductDownloadLinksBySku&sessionId={uuid}&skuId={skuid}&language=English&sdVersion=2"),
-    };
+#[derive(Deserialize)]
+struct SkuData {
+    #[serde(rename = "Skus")]
+    skus: Vec<WindowsSku>,
+}
 
-    let download_link_html = client
-        .post(download_page_url)
-        .header(USER_AGENT, &user_agent)
-        .header(ACCEPT, "")
-        .header(REFERER, url)
-        .body("")
-        .send()?
-        .text()?;
+#[derive(Deserialize)]
+struct WindowsSku {
+    #[serde(rename = "Id")]
+    id: String,
+    #[serde(rename = "LocalizedLanguage")]
+    localized_language: String,
+}
 
-    if download_link_html.is_empty() {
-        return Err(RidoError::EmptyResponse);
-    } else if download_link_html.contains("We are unable to complete your request at this time.") {
-        return Err(RidoError::BlockedRequest);
-    }
+fn get_skus(client: &reqwest::blocking::Client, product_id: &str, uuid: &str) -> Result<Vec<WindowsSku>, RidoError> {
+    let skuid_table_url = format!("https://www.microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=606624d44113&ProductEditionId={}&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID={}", product_id,uuid);
+    let skuid_table = client.get(skuid_table_url).send()?.text()?;
+    let skuid_table: SkuData = serde_json::from_str(&skuid_table).map_err(RidoError::JSONParsing)?;
+    Ok(skuid_table.skus)
+}
 
-    let hash_regex = Regex::new(r#">([A-F0-9]{64})</td></tr><tr><td>([^36]*)(64|32)-bit"#).unwrap();
-    let hash = hash_regex.captures_iter(&download_link_html).find_map(
-        |c| {
-            if c[2].trim() == hash_lang && &c[3] == bits {
-                Some(c[1].to_string())
-            } else {
-                None
-            }
-        },
-    );
+#[derive(Deserialize)]
+struct UrlDataParse {
+    #[serde(rename = "ProductDownloadOptions")]
+    product_download_options: Vec<WindowsUrlData>,
+}
 
-    let html_truncation_len = min(download_link_html.len(), 4096);
+#[derive(Deserialize)]
+struct WindowsUrlData {
+    #[serde(rename = "Uri")]
+    uri: String,
+}
 
-    let url_regex = Regex::new(r#"href="(https://software\.download\.prss\.microsoft\.com/dbazure[^"]*)""#).unwrap();
-    let url_capture = url_regex
-        .captures_iter(&download_link_html[..html_truncation_len])
-        .find(|c| {
-            let url = &c[1];
-            url.find(".iso").map_or(false, |index| url[..index].contains(isotype))
-        })
-        .ok_or(RidoError::HTMLParse)?;
-
-    let url = url_capture[1]
-        .chars()
-        .filter(|c| c.is_alphanumeric() || c.is_ascii_punctuation())
-        .collect::<String>()
-        .replace("&amp;", "&");
-
-    Ok((url, hash))
+fn get_urls(client: &reqwest::blocking::Client, skuid: &str, uuid: &str, referer: &str) -> Result<Vec<WindowsUrlData>, RidoError> {
+    let url = format!("https://www.microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=606624d44113&productEditionId=undefined&SKU={skuid}&friendlyFileName=undefined&Locale=en-US&sessionID={uuid}");
+    let url_json = client.get(url).header(REFERER, referer).send()?.text()?;
+    let url: UrlDataParse = serde_json::from_str(&url_json).map_err(RidoError::JSONParsing)?;
+    Ok(url.product_download_options)
 }
 
 #[derive(EnumIter, Debug, Copy, Clone, PartialEq)]

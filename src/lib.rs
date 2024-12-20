@@ -197,10 +197,14 @@ pub enum RidoError {
     BlockedRequest,
     #[error("Unable to parse download link from HTML")]
     HTMLParse,
+    #[error("Could not parse JSON: {0}")]
+    JSONParsing(serde_json::Error),
     #[error("Could not find SKUID")]
     SKUID,
     #[error("Could not find Product ID")]
     ProductID,
+    #[error("Could not find URL")]
+    URL,
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 }
