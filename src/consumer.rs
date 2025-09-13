@@ -12,9 +12,11 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
     if arch == WindowsArchitecture::i686 && release == ConsumerRelease::Eleven {
         return Err(RidoError::InvalidArchitecture(release.into(), arch));
     }
+
     let url = match release {
         ConsumerRelease::Ten => "https://microsoft.com/en-us/software-download/windows10ISO",
         ConsumerRelease::Eleven => "https://microsoft.com/en-us/software-download/windows11",
+        _ => "",
     };
     let isotype = match arch {
         WindowsArchitecture::x86_64 => "x64",
@@ -34,21 +36,26 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
 
     let client = reqwest::blocking::Client::new();
 
-    let download_page_html = client
-        .get(url)
-        .header(USER_AGENT, &user_agent)
-        .header(ACCEPT, "")
-        .send()?
-        .text()?;
+    let product_id = if let ConsumerRelease::CustomProductID(id) = release {
+        id.to_string()
+    } else {
+        let download_page_html = client
+            .get(url)
+            .header(USER_AGENT, &user_agent)
+            .header(ACCEPT, "")
+            .send()?
+            .text()?;
 
-    let product_id = download_page_html[..std::cmp::min(download_page_html.len(), 102400)]
-        .split("option")
-        .find_map(|value| {
-            let start = value.find("value=\"")? + 7;
-            let end = value.find("\">Windows")?;
-            Some(value.get(start..end).unwrap())
-        })
-        .ok_or(RidoError::ProductID)?;
+        download_page_html[..std::cmp::min(download_page_html.len(), 102400)]
+            .split("option")
+            .find_map(|value| {
+                let start = value.find("value=\"")? + 7;
+                let end = value.find("\">Windows")?;
+                Some(value.get(start..end).unwrap())
+            })
+            .ok_or(RidoError::ProductID)?
+            .to_string()
+    };
 
     client
         .get(format!("https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id={uuid}",))
@@ -56,14 +63,22 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         .header(USER_AGENT, &user_agent)
         .send()?;
 
-    let skuid_table = get_skus(&client, product_id, &uuid)?;
+    let skuid_table = get_skus(&client, &product_id, &uuid)?;
     let sku = skuid_table
         .into_iter()
         .find(|s| s.localized_language == lang.to_string())
         .ok_or(RidoError::SKUID)?;
     let skuid = sku.id;
 
-    let urls = get_urls(&client, &skuid, &uuid, url)?;
+    let referer = if let ConsumerRelease::CustomProductID(_) = release {
+        // Product names are formatted as 'Windows <release> <release tag>'. e.g. 'Windows 11 24H2'
+        // We can just grab the second space-delimited value and it should be release
+        let release = sku.product_display_name.split_ascii_whitespace().nth(1).unwrap_or("11");
+        &format!("https://www.microsoft.com/software-download/windows{release}")
+    } else {
+        url
+    };
+    let urls = get_urls(&client, &skuid, &uuid, referer)?;
     let url = urls
         .into_iter()
         .map(|u| u.uri)
@@ -73,16 +88,16 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct SkuData {
-    #[serde(rename = "Skus")]
     skus: Vec<WindowsSku>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct WindowsSku {
-    #[serde(rename = "Id")]
+    product_display_name: String,
     id: String,
-    #[serde(rename = "LocalizedLanguage")]
     localized_language: String,
 }
 
@@ -94,14 +109,14 @@ fn get_skus(client: &reqwest::blocking::Client, product_id: &str, uuid: &str) ->
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct UrlDataParse {
-    #[serde(rename = "ProductDownloadOptions")]
     product_download_options: Vec<WindowsUrlData>,
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
 struct WindowsUrlData {
-    #[serde(rename = "Uri")]
     uri: String,
 }
 
@@ -116,6 +131,7 @@ fn get_urls(client: &reqwest::blocking::Client, skuid: &str, uuid: &str, referer
 pub enum ConsumerRelease {
     Eleven,
     Ten,
+    CustomProductID(u32),
 }
 
 impl From<ConsumerRelease> for WindowsRelease {
@@ -129,6 +145,7 @@ impl fmt::Display for ConsumerRelease {
         let text = match self {
             ConsumerRelease::Ten => "Windows 10",
             ConsumerRelease::Eleven => "Windows 11",
+            ConsumerRelease::CustomProductID(id) => &format!("Custom Product ID: {id}"),
         };
         write!(f, "{text}")
     }
@@ -140,7 +157,13 @@ impl TryFrom<&str> for ConsumerRelease {
         Ok(match value {
             "10" => Self::Ten,
             "11" => Self::Eleven,
-            _ => return Err(RidoError::InvalidReleaseStr),
+            _ => {
+                if let Some(Ok(product_id)) = value.strip_prefix("productid:").map(str::trim).map(str::parse) {
+                    Self::CustomProductID(product_id)
+                } else {
+                    return Err(RidoError::InvalidReleaseStr);
+                }
+            }
         })
     }
 }

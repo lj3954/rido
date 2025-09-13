@@ -23,6 +23,10 @@ use rido::WindowsData;
 let release = WindowsData::new("10", "English (United States)", "x86_64")?;
 ```
 
+Optionally, for a specific Product ID can be specified for Consumer windows releases.
+This allows for pinning to a specific release, so long as it remains publicly available.
+This can be done by replacing the release string with ```"productid:id"```. 
+
 The WindowsData struct contains URL (`String`) and Hash (`Option<String>`) instance fields, which 
 are populated by the `new` method.
 
