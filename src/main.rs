@@ -23,7 +23,7 @@ The source code for this program can be found at 'https://github.com/lj3954/rido
 For more information, run {} --license\n",
                 args[0]
             );
-            eprintln!("Usage: {} [language] [arch]", args[0]);
+            eprintln!("Usage: {} [release] [language] [arch]", args[0]);
             std::process::exit(1);
         }
     };
@@ -34,7 +34,13 @@ For more information, run {} --license\n",
     }
 
     match rido::WindowsData::new(release, language, arch) {
-        Ok(release) => println!("{} {}", &release.url, if let Some(hash) = &release.hash { hash } else { "" }),
+        Ok(release) => {
+            if let Some(hash) = &release.hash {
+                println!("{} {}", release.url, hash);
+            } else {
+                println!("{}", release.url);
+            }
+        }
         Err(e) => {
             eprintln!("{e}");
             std::process::exit(1);
