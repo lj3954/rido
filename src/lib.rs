@@ -205,6 +205,8 @@ pub enum RidoError {
     ProductID,
     #[error("Could not find URL")]
     URL,
+    #[error("Could not authenticate session with Microsoft")]
+    SessionAuth,
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 }

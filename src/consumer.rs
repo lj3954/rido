@@ -1,4 +1,6 @@
 use crate::{RidoError, ValidateLanguage, ValidateWithArch, WindowsArchitecture, WindowsLanguage, WindowsRelease};
+use chrono::Utc;
+use regex::Regex;
 use reqwest::header::{ACCEPT, REFERER, USER_AGENT};
 use serde::Deserialize;
 use std::{fmt, time::SystemTime};
@@ -7,6 +9,7 @@ use uuid::Uuid;
 
 const FIREFOX_124_RELEASE_TIME: u64 = 1710806400;
 const FOUR_WEEKS: u64 = 2419200;
+const INSTANCE_ID: &str = "560dc9f3-1aa5-4a2f-b63c-9e18f8d0e175";
 
 pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch: WindowsArchitecture) -> Result<(String, Option<String>), RidoError> {
     if arch == WindowsArchitecture::i686 && release == ConsumerRelease::Eleven {
@@ -32,8 +35,6 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
         format!("Mozilla 5.0 (X11, Linux x86_64; rv:{firefox_release}.0) Gecko/20100101 Firefox/{firefox_release}.0")
     };
 
-    let uuid = Uuid::new_v4().to_string();
-
     let client = reqwest::blocking::Client::new();
 
     let product_id = if let ConsumerRelease::CustomProductID(id) = release {
@@ -57,13 +58,9 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
             .to_string()
     };
 
-    client
-        .get(format!("https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id={uuid}",))
-        .header(ACCEPT, "")
-        .header(USER_AGENT, &user_agent)
-        .send()?;
+    let session_id = permit_session(&client).ok_or(RidoError::SessionAuth)?;
 
-    let skuid_table = get_skus(&client, &product_id, &uuid)?;
+    let skuid_table = get_skus(&client, &product_id, &session_id)?;
     let sku = skuid_table
         .into_iter()
         .find(|s| s.localized_language == lang.to_string())
@@ -78,13 +75,41 @@ pub fn get_consumer_info(release: ConsumerRelease, lang: ConsumerLanguage, arch:
     } else {
         url
     };
-    let urls = get_urls(&client, &skuid, &uuid, referer)?;
+
+    let urls = get_urls(&client, &skuid, &session_id, referer)?;
     let url = urls
         .into_iter()
         .map(|u| u.uri)
         .find(|u| u.contains(isotype))
         .ok_or(RidoError::URL)?;
+
     Ok((url, None))
+}
+
+fn permit_session(client: &reqwest::blocking::Client) -> Option<String> {
+    let session_id = Uuid::new_v4().to_string();
+    let permit_url = format!("https://vlscppe.microsoft.com/tags?org_id=y6jn8c31&session_id={session_id}");
+
+    client.get(&permit_url).header(ACCEPT, "").send().ok()?;
+
+    let url = format!("https://ov-df.microsoft.com/mdt.js?instanceId={INSTANCE_ID}&PageId=si&session_id={session_id}");
+
+    let response = client.get(&url).send().ok()?;
+    let text = response.text().ok()?;
+
+    let w_regex = Regex::new(r#"[?&]w=([A-F0-9]+)"#).unwrap();
+    let rticks_regex = Regex::new(r#"rticks\=\"\+?(\d+)"#).unwrap();
+
+    let rticks = rticks_regex.captures(&text).and_then(|c| c.get(1)).map(|m| m.as_str())?;
+
+    let w = w_regex.captures(&text).and_then(|c| c.get(1)).map(|m| m.as_str())?;
+
+    let epoch = Utc::now().timestamp();
+
+    let url = format!("https://ov-df.microsoft.com/?session_id={session_id}&CustomerId={INSTANCE_ID}&PageId=si&w={w}&mdt={epoch}&rticks={rticks}");
+    client.get(&url).send().ok()?;
+
+    Some(session_id)
 }
 
 #[derive(Deserialize)]
@@ -101,8 +126,8 @@ struct WindowsSku {
     localized_language: String,
 }
 
-fn get_skus(client: &reqwest::blocking::Client, product_id: &str, uuid: &str) -> Result<Vec<WindowsSku>, RidoError> {
-    let skuid_table_url = format!("https://www.microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=606624d44113&ProductEditionId={}&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID={}", product_id,uuid);
+fn get_skus(client: &reqwest::blocking::Client, product_id: &str, session_id: &str) -> Result<Vec<WindowsSku>, RidoError> {
+    let skuid_table_url = format!("https://www.microsoft.com/software-download-connector/api/getskuinformationbyproductedition?profile=606624d44113&ProductEditionId={}&SKU=undefined&friendlyFileName=undefined&Locale=en-US&sessionID={}", product_id,session_id);
     let skuid_table = client.get(skuid_table_url).send()?.text()?;
     let skuid_table: SkuData = serde_json::from_str(&skuid_table).map_err(RidoError::JSONParsing)?;
     Ok(skuid_table.skus)
@@ -120,8 +145,8 @@ struct WindowsUrlData {
     uri: String,
 }
 
-fn get_urls(client: &reqwest::blocking::Client, skuid: &str, uuid: &str, referer: &str) -> Result<Vec<WindowsUrlData>, RidoError> {
-    let url = format!("https://www.microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=606624d44113&productEditionId=undefined&SKU={skuid}&friendlyFileName=undefined&Locale=en-US&sessionID={uuid}");
+fn get_urls(client: &reqwest::blocking::Client, skuid: &str, session_id: &str, referer: &str) -> Result<Vec<WindowsUrlData>, RidoError> {
+    let url = format!("https://www.microsoft.com/software-download-connector/api/GetProductDownloadLinksBySku?profile=606624d44113&productEditionId=undefined&SKU={skuid}&friendlyFileName=undefined&Locale=en-US&sessionID={session_id}");
     let url_json = client.get(url).header(REFERER, referer).send()?.text()?;
     let url: UrlDataParse = serde_json::from_str(&url_json).map_err(RidoError::JSONParsing)?;
     Ok(url.product_download_options)
